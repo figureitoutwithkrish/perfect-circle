@@ -72,8 +72,8 @@ Final score = shape score × centering multiplier
 Needs Python **3.9 – 3.12** (MediaPipe can have trouble on 3.13) and a webcam.
 
 ```bash
-git clone https://github.com/figureitoutkrish/PerfectCircleAppwithPYTHON.git
-cd PerfectCircleAppwithPYTHON
+git clone https://github.com/figureitoutkrish/perfect-circle.git
+cd perfect-circle
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
