@@ -1,181 +1,129 @@
 # Perfect Circle 🟢
 
-A gesture-controlled precision challenge where you draw a circle in the air using your index finger and get scored on how perfect it is. Built with MediaPipe, OpenCV, and Pygame.
+**Draw a circle in the air with your finger and find out how perfect it is.**
+
+Your webcam tracks your hand in real time. Raise your index finger, trace a circle around the green dot, close the loop, and the game scores your circle out of 100, with a leaderboard to beat your friends.
+
+> 🎓 Built for the IDSA course project at MPSTME, NMIMS.
 
 ---
 
-## What It Does
+## Why it's more than a game
 
-- Uses your **webcam** to track your hand in real time
-- Raise your **index finger** to start drawing
-- Draw a circle around the center dot on screen
-- Get scored on **shape accuracy** and **centering**
-- Scores and player names saved to a local leaderboard
+Perfect Circle uses the same building blocks as serious hand-tracking products: find the hand in a camera image, follow a fingertip, clean up the jittery signal, and judge the shape it drew.
 
----
-
-## Requirements
-
-- Python **3.9 – 3.12** recommended (Python 3.13 may have issues with some MediaPipe versions)
-- A working **webcam**
-- **macOS, Windows, or Linux**
+| Where the same idea shows up | What it does there |
+|---|---|
+| 🖐️ **Touch-free screens** | Kiosks and hospital displays you control by pointing, without touching a shared screen. |
+| 🥽 **AR and VR** | Headsets track your hands so you can grab and draw in the air. |
+| 🩺 **Motor-skill exercises** | Tracing shapes is a common steadiness exercise; a score shows progress over time. |
+| 🧑‍🏫 **Teaching computer vision** | A fun, visual way to show hand landmarks, smoothing and curve fitting in action. |
 
 ---
 
-## Installation
+## How it works
 
-### Step 1 — Make sure Python is installed
-
-Open a terminal and run:
-
-```bash
-python --version
+```mermaid
+flowchart LR
+    A[Webcam frame] --> B[MediaPipe finds<br/>21 hand landmarks]
+    B --> C{Which gesture?}
+    C -- index finger up --> D[Follow the fingertip,<br/>smoothing the jitter]
+    C -- peace sign --> R[Restart]
+    C -- thumb down --> N[Change player]
+    D --> E[Loop closed?]
+    E --> F[Fit the best circle<br/>through the points]
+    F --> G[Score shape × centering]
+    G --> H[Leaderboard]
 ```
 
-If you don't have Python, download it from [python.org](https://www.python.org/downloads/).
+- **Hand tracking:** MediaPipe finds 21 points on your hand in each frame, and the game reads gestures from which fingers are raised.
+- **Smoothing:** raw fingertip positions jitter, so they are smoothed as you draw (exponential smoothing), and the finished path is rounded off (Chaikin smoothing).
+- **Circle fitting:** the **Taubin fit**, a classic algebraic method, finds the mathematically best circle through your points. It is more accurate than averaging the points, especially for wobbly or partial loops.
+
+## How you're scored
+
+![How a circle is scored](images/scoring.png)
+
+**Shape score** (how circular is it?), weighted:
+- **Radius consistency, 60%:** are all your points the same distance from the fitted centre?
+- **Smoothness, 20%:** did your finger move round at a steady speed?
+- **Closure, 12%:** did the end meet the start?
+- **Fullness, 8%:** did you go all the way round?
+
+**Centering multiplier:** the further your circle's centre is from the green dot, the more of the shape score you lose. 10% of the radius off keeps 86%; half a radius off keeps 47%.
+
+```
+Final score = shape score × centering multiplier
+```
+
+| Score | Tier |
+|---|---|
+| 90 – 100 | Perfect Circle 🥇 |
+| 78 – 89 | Legendary Circle |
+| 65 – 77 | Master Circle |
+| 50 – 64 | Great Circle |
+| 30 – 49 | Decent Attempt |
+| 0 – 29 | Keep Practicing |
 
 ---
 
-### Step 2 — (Recommended) Create a virtual environment
+## Run it
 
-This keeps the project dependencies separate from your system Python.
+Needs Python **3.9 – 3.12** (MediaPipe can have trouble on 3.13) and a webcam.
 
 ```bash
+git clone https://github.com/figureitoutkrish/PerfectCircleAppwithPYTHON.git
+cd PerfectCircleAppwithPYTHON
 python -m venv venv
-```
-
-Activate it:
-
-- **macOS / Linux:**
-  ```bash
-  source venv/bin/activate
-  ```
-- **Windows:**
-  ```bash
-  venv\Scripts\activate
-  ```
-
----
-
-### Step 3 — Install dependencies
-
-> ⚠️ **Important:** Use `opencv-python-headless` and NOT `opencv-python`. On macOS especially, `opencv-python` bundles its own SDL2 which crashes when used alongside Pygame. The headless version avoids this.
-
-```bash
-pip install mediapipe opencv-python-headless pygame
-```
-
-If you already have `opencv-python` installed, remove it first:
-
-```bash
-pip uninstall opencv-python -y
-pip install opencv-python-headless
-```
-
----
-
-### Step 4 — Run the game
-
-```bash
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 python perfect_circle.py
 ```
 
-The first time you run it, if you are on a newer version of MediaPipe it will automatically download a small hand landmark model file (~8 MB) into your system temp folder. This only happens once.
+> ⚠️ Use `opencv-python-headless`, not `opencv-python`. On macOS the regular version bundles its own SDL2, which crashes alongside Pygame. `requirements.txt` already installs the right one.
 
----
+On newer MediaPipe versions, the first run downloads a small hand-landmark model (about 8 MB). This only happens once.
 
-## How to Play
+### Controls
 
 | Gesture | Action |
 |---|---|
 | ☝️ **Index finger only** | Start drawing |
 | Draw in the air | Trace a circle around the green dot |
-| Close the loop | Bring your finger back near the starting point to submit |
-| ✌️ **Peace sign** | Play again / Cancel current drawing |
-| 👎 **Thumb down** | Go back to the player name screen |
+| Close the loop | Bring your finger back near the start to submit |
+| ✌️ **Peace sign** | Play again, or cancel the drawing |
+| 👎 **Thumb down** | Back to the player-name screen |
 
-**Tips for a better score:**
-- Draw slowly and steadily
-- Try to keep the green dot inside your circle
-- The more centered your circle is on the dot, the higher your centering score
-- Good lighting makes a big difference — face a light source and avoid bright windows behind you
-
----
-
-## Scoring System
-
-Your final score is the product of two components:
-
-**SHAPE** — How circular is your drawing?
-- Radius consistency (are all points the same distance from the center?)
-- Smoothness (is the path clean or jagged?)
-- Closure (did you close the loop?)
-- Fullness (did you draw a complete 360°?)
-
-**CENTERING** — Is your circle centered on the green dot?
-- Measured as the distance between your circle's center and the dot
-- The further off-center, the more your shape score is multiplied down
-
-```
-Final Score = Shape Score × Centering Multiplier
-```
-
-### Tiers
-
-| Score | Tier |
-|---|---|
-| 90 – 100% | Perfect Circle 🥇 |
-| 78 – 89% | Legendary Circle |
-| 65 – 77% | Master Circle |
-| 50 – 64% | Great Circle |
-| 30 – 49% | Decent Attempt |
-| 0 – 29% | Keep Practicing |
-
----
-
-## Files
-
-```
-perfect_circle.py          — main game file
-perfect_circle_scores.json — leaderboard (auto-created on first score)
-```
+**Tips:** draw slowly and steadily, keep the green dot inside your circle, and face a light source (not a bright window).
 
 ---
 
 ## Troubleshooting
 
-**App crashes on startup with SDL2 errors**
-You have `opencv-python` installed alongside Pygame. Fix:
+**Crashes on start with SDL2 errors:** you have `opencv-python` installed next to Pygame.
 ```bash
 pip uninstall opencv-python -y
 pip install opencv-python-headless
 ```
 
-**`AttributeError: module 'mediapipe' has no attribute 'solutions'`**
-Your MediaPipe version is 0.10+. The code handles this automatically, but make sure you have an internet connection on the first run so it can download the model file.
+**`module 'mediapipe' has no attribute 'solutions'`:** you have MediaPipe 0.10 or newer. The game handles this, but needs internet on the first run to download the model.
 
-**Webcam not detected**
-Make sure no other app (Zoom, FaceTime, etc.) is using the camera. On macOS, you may need to grant Terminal or your IDE camera permissions in System Settings → Privacy & Security → Camera.
+**Webcam not found:** close other apps using the camera (Zoom, FaceTime). On macOS, allow camera access for Terminal or your editor in System Settings → Privacy & Security → Camera.
 
-**Hand not being detected**
-- Improve lighting — face a lamp or window in front of you
-- Keep your hand within arm's reach of the camera
-- Make sure your background isn't too busy or dark
+**Hand not detected:** improve the lighting, keep your hand within arm's reach, and avoid a busy or dark background.
 
-**Low FPS (below 20)**
-- Close other applications
-- Try reducing camera resolution by changing `1280` and `720` in `perfect_circle.py` to `640` and `480`
+**Low FPS (under 20):** close other apps, or lower the camera resolution from `1280 × 720` to `640 × 480` in `perfect_circle.py`.
 
----
+## Files
 
-## Dependencies
+```
+perfect_circle.py           the game
+perfect_circle_scores.json  the leaderboard (created on the first score)
+requirements.txt            the three libraries it needs
+```
 
-| Package | Purpose |
-|---|---|
-| `mediapipe` | Hand landmark detection |
-| `opencv-python-headless` | Webcam capture and frame processing |
-| `pygame` | Window, rendering, and input |
+**Built with:** Python, MediaPipe (hand tracking), OpenCV (camera), Pygame (window and drawing).
 
 ---
 
-*Made for IDSA subject project.*
+Built by [Krish Viramgama](https://github.com/figureitoutkrish).
